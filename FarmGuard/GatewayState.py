@@ -1,3 +1,16 @@
+"""
+GatewayState — 시스템 전체가 공유하는 "상태 칠판"
+
+[역할]
+센서를 읽지도, 공격을 탐지하지도, 차단하지도 않는다.
+다른 클래스들(SensorCollector/AttackDetector/Blocker)이 알아낸 결과를
+적어두고, WebServer가 와서 "지금 상태 뭐야?" 물어보면 알려주는 공유 저장소.
+
+[주의]
+- 여러 스레드가 동시에 읽고 쓰므로 모든 메소드는 self._lock으로 감싼다.
+- 이 객체는 시스템 전체에서 "딱 하나만" 만들어서 모든 클래스가 참조(공유)해야 한다.
+"""
+
 import threading
 import time
 
