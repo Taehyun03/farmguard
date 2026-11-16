@@ -45,5 +45,7 @@ class AttackDetector:
     def monitor_traffic(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.bind(('0.0.0.0',9999))
-        data, addr = s.recvfrom() # addr 
-        self.packet_count.get(addr)
+        while True:
+            data, addr = s.recvfrom(1024) # addr 
+            addr.get(addr[0])
+            
