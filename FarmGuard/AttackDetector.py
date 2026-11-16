@@ -29,14 +29,21 @@ state.is_protected()가 False(무방비 모드)면 애초에 탐지 로직 자�
 - check_flooding(ip)  : 해당 IP가 임계치 넘었는지 판단
 - run()               : 전체 탐지 루프 (별도 스레드)
 """
+import socket
 
 class AttackDetector:
     def __init__(self,state,blocker,storage,threshold=1000):
-        self.state = state # 탐지 결과 저장
-        self.blocker = blocker # 차단을 요청할 대상 
-        self.storage = storage # 기록을 남길 대상
+        self.state = state # 현재 상태
+        self.blocker = blocker # 차단을 요청할 대상
+        self.storage = storage # 기록
+        self.packet_count = {} # IP별로 지금까지 몇개 패킷이 왔는지 세는 카운터
         self.threshold = threshold # 탐지 임계점 기준값
-        
     
+    def check_flooding(self,ip):
+        return self.packet_count.get(ip,0) >= self.threshold # 패킷 세는 카운터에 ip를 넣고 임계값을 넘는지 확인 
         
-    
+    def monitor_traffic(self):
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.bind(('0.0.0.0',9999))
+        data, addr = s.recvfrom() # addr 
+        self.packet_count.get(addr)
