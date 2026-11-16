@@ -30,6 +30,7 @@ state.is_protected()가 False(무방비 모드)면 애초에 탐지 로직 자�
 - run()               : 전체 탐지 루프 (별도 스레드)
 """
 import socket
+import time
 
 class AttackDetector:
     def __init__(self,state,blocker,storage,threshold=1000):
@@ -42,10 +43,30 @@ class AttackDetector:
     def check_flooding(self,ip):
         return self.packet_count.get(ip,0) >= self.threshold # 패킷 세는 카운터에 ip를 넣고 임계값을 넘는지 확인 
         
-    def monitor_traffic(self):
+    def monitor_traffic(self): # 1초 내에 한 ip로부터 얼마나 많은 패킷이 들어오는지 트래픽 감시
+        now = time.time()
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.bind(('0.0.0.0',9999))
+        s.settimeout(1.0)
+        while time.time() - now <= 1:
+            try:
+                data, addr = s.recvfrom(1024) # addr 
+                ip = addr[0] # 입력온 패킷 ip주소 저장
+                self.packet_count[ip] = self.packet_count.get(ip,0) + 1 # 패킷 카운터에 key값이 ip인 value값을 +1 (패킷 1개가 왔다는 것을 의미)
+            except socket.timeout: # 패킷 1초간 안오면 while문 빠져나감
+                print("1초간 패킷이 오지않음\n")
+                break
+        s.close()
+        
+    def run(self): # 무한 관찰, 판단, 차단까지 하는 메서드
         while True:
-            data, addr = s.recvfrom(1024) # addr 
-            addr.get(addr[0])
-            
+            self.monitor_traffic()
+            flood_list = []
+            for ip in self.packet_count:
+                if self.check_flooding(ip):
+                    self.blocker.block(ip)
+                    self.state.markAttack(ip)
+                    self.storage.log({"ip":ip,"count":self.packet_count[ip],"time":time.time()})
+                    flood_list.append(ip)
+            for ip in flood_list:
+                self.packet_count.pop(ip)

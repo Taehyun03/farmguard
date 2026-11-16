@@ -24,6 +24,7 @@ class GatewayState:
         self._latest = None # 방금 들어온 센서값 한 묶음 
         self._events = [] # 최근 있었던 이벤트 / 공격탐지됨 등등 정보 
         self._overloaded = False # 무방비 상태에서 센서수집이 멈췄는가
+        
     def setProtection(self):
         with self._lock:
             self._protected = not self._protected # 팜가드 온/오프 값을 뒤집기만 함.
