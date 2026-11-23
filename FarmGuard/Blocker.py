@@ -22,6 +22,7 @@ iptables 규칙을 걸어서 해당 IP의 트래픽을 막는다(block). 복구 
 import subprocess
 import threading
 import time
+
 class Blocker:
     def __init__(self, state, storage, recover_seconds=3):
         self.state = state
@@ -34,14 +35,14 @@ class Blocker:
         with self.lock:
             if ip in self.blocked:
                 return
-            print(f"[테스트] {ip} 차단함 (실제 iptables는 라즈베리파이에서)")  # subprocess.run 대신
+            subprocess.run(["iptables", "-A", "INPUT", "-s", ip, "-j", "DROP"])
             self.blocked[ip] = time.time()
 
     def unblock(self, ip):
         with self.lock:
             if ip not in self.blocked:
                 return
-            print(f"[테스트] {ip} 차단 해제함")  # subprocess.run 대신
+            subprocess.run(["iptables", "-D", "INPUT", "-s", ip, "-j", "DROP"])
             del self.blocked[ip]
         self.storage.insert_event("RECOVER", f"ip={ip} 차단 해제됨")
         self.state.markRecovery(ip)
