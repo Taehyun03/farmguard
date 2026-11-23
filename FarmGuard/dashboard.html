@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>FarmGuard 대시보드</title>
+    <style>
+        body { font-family: sans-serif; background: #f5f5f5; padding: 20px; }
+        .status-box { padding: 20px; border-radius: 10px; margin-bottom: 20px; color: white; }
+        .status-ok { background: #4CAF50; }
+        .status-attack { background: #e74c3c; }
+        .card { background: white; padding: 15px; border-radius: 8px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .events { max-height: 200px; overflow-y: auto; font-size: 14px; }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>🌱 FarmGuard 상태</h1>
+
+    <div id="statusBox" class="status-box status-ok">
+        <h2 id="modeText">불러오는 중...</h2>
+        <p id="msgText"></p>
+    </div>
+
+    <div class="card">
+        <h3>센서값</h3>
+        <p id="sensorStatus"></p>
+        <p>온도: <span id="temp">-</span> °C</p>
+        <p>습도: <span id="humidity">-</span> %</p>
+        <p>토양수분: <span id="soil">-</span></p>
+        <p>조도: <span id="light">-</span></p>
+    </div>
+
+    <div class="card">
+        <h3>보호 기능</h3>
+        <button onclick="toggleProtection()">ON/OFF 전환</button>
+    </div>
+
+    <div class="card">
+        <h3>최근 이벤트</h3>
+        <div id="events" class="events">없음</div>
+    </div>
+
+    <script>
+        async function fetchStatus() {
+            const res = await fetch("/api/status");
+            const data = await res.json();
+
+            const box = document.getElementById("statusBox");
+            const modeText = document.getElementById("modeText");
+            const msgText = document.getElementById("msgText");
+
+            if (data.mode === "공격탐지") {
+                box.className = "status-box status-attack";
+            } else {
+                box.className = "status-box status-ok";
+            }
+            modeText.textContent = data.mode + (data.attacker ? ` (${data.attacker})` : "");
+            msgText.textContent = data.msg;
+
+            const sensorStatus = document.getElementById("sensorStatus");
+            const latest = data.latest;
+            if (data.overloaded) {
+                sensorStatus.textContent = "⚠️ 센서 연결 안됨";
+            } else if (latest) {
+                sensorStatus.textContent = "";
+                document.getElementById("temp").textContent = latest.temperature;
+                document.getElementById("humidity").textContent = latest.humidity;
+                document.getElementById("soil").textContent = latest.soil_moisture;
+                document.getElementById("light").textContent = latest.light;
+            }
+
+            const eventsDiv = document.getElementById("events");
+            if (data.events && data.events.length > 0) {
+                eventsDiv.innerHTML = data.events
+                    .map(e => `<div>[${e.ts}] ${e.kind} - ${e.detail}</div>`)
+                    .join("");
+            } else {
+                eventsDiv.textContent = "없음";
+            }
+        }
+
+        async function toggleProtection() {
+            await fetch("/api/toggle", { method: "POST" });
+            fetchStatus();
+        }
+
+        fetchStatus();
+        setInterval(fetchStatus, 1000);
+    </script>
+</body>
+</html>

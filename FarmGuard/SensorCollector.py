@@ -36,7 +36,7 @@ class SensorCollector:
 
     def read_sensor(self):
         if self.test_mode:
-            return {"temperature": 24.5, "humidity": 55.0, "soil_moisture": 400, "light": 700}
+            return None  # 아두이노 연결 안 된 상황을 그대로 흉내 냄
         try:
             line = self.ser.readline().decode().strip()
             if not line:
@@ -58,6 +58,7 @@ class SensorCollector:
                 self.state.setLatest(sample)
                 self.storage.insert_sensor(sample)
                 self.last_success = time.time()
+                self.state.setOverloaded(False)
             else:
                 if time.time() - self.last_success >= self.overload_timeout:
                     self.state.setOverloaded(True)
