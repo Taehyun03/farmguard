@@ -19,3 +19,42 @@ iptables 규칙을 걸어서 해당 IP의 트래픽을 막는다(block). 복구 
 - unblock(ip)    : iptables 규칙 해제 + 차단 목록에서 제거
 - is_blocked(ip) : 해당 IP가 지금 차단 중인지 True/False 반환
 """
+import subprocess
+import threading
+import time
+class Blocker:
+    def __init__(self, state, storage, recover_seconds=3):
+        self.state = state
+        self.storage = storage
+        self.recover_seconds = recover_seconds
+        self.blocked = {}
+        self.lock = threading.Lock()
+
+    def block(self, ip):
+        with self.lock:
+            if ip in self.blocked:
+                return
+            print(f"[테스트] {ip} 차단함 (실제 iptables는 라즈베리파이에서)")  # subprocess.run 대신
+            self.blocked[ip] = time.time()
+
+    def unblock(self, ip):
+        with self.lock:
+            if ip not in self.blocked:
+                return
+            print(f"[테스트] {ip} 차단 해제함")  # subprocess.run 대신
+            del self.blocked[ip]
+        self.storage.insert_event("RECOVER", f"ip={ip} 차단 해제됨")
+        self.state.markRecovery(ip)
+
+    def is_blocked(self, ip):
+        with self.lock:
+            return ip in self.blocked
+
+    def run(self):
+        while True: 
+            now = time.time()
+            with self.lock:
+                expired = [ip for ip, t in self.blocked.items() if now - t >= self.recover_seconds]
+            for ip in expired:
+                self.unblock(ip)
+            time.sleep(0.5)

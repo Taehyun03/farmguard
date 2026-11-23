@@ -23,3 +23,61 @@ WebServer — HTTP 서버로 대시보드 화면과 API를 제공하는 담당 (
 - handle_history_request()
 - serve() : 실제 HTTP 서버를 띄우고 요청을 위 메소드들로 분기
 """
+
+import json
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
+
+class WebServer:
+    def __init__(self, state, storage, host="0.0.0.0", port=8080):
+        self.state = state
+        self.storage = storage
+        self.host = host
+        self.port = port
+
+    def handle_status_request(self):
+        return self.state.snapshot()
+
+    def handle_toggle_request(self):
+        self.state.setProtection()   # 토글만 실행하고
+        return self.state.snapshot() # 바뀐 전체 상태를 받아서 리턴
+
+    def handle_history_request(self):
+        return self.storage.recent_history(100)
+
+    def serve(self):
+        outer = self  # Handler 클래스 안에서 이 WebServer 객체를 쓰기 위해 이름을 따로 잡아둠
+
+        class Handler(BaseHTTPRequestHandler):
+            def _send_json(self, data, status=200):
+                body = json.dumps(data).encode()
+                self.send_response(status)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(body)
+
+            def do_GET(self):
+                if self.path == "/":
+                    with open("dashboard.html", "rb") as f:
+                        body = f.read()
+                    self.send_response(200)
+                    self.send_header("Content-Type", "text/html")
+                    self.end_headers()
+                    self.wfile.write(body)
+                elif self.path == "/api/status":
+                    self._send_json(outer.handle_status_request())
+                elif self.path == "/api/history":
+                    self._send_json(outer.handle_history_request())
+                else:
+                    self.send_response(404)
+                    self.end_headers()
+
+            def do_POST(self):
+                if self.path == "/api/toggle":
+                    self._send_json(outer.handle_toggle_request())
+                else:
+                    self.send_response(404)
+                    self.end_headers()
+
+        server = HTTPServer((self.host, self.port), Handler)
+        server.serve_forever()

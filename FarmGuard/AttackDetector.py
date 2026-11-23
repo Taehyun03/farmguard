@@ -58,7 +58,7 @@ class AttackDetector:
                 break
         s.close()
         
-    def run(self): # 무한 관찰, 판단, 차단까지 하는 메서드
+    def run(self):  # 무한 관찰, 판단, 차단까지 하는 메서드
         while True:
             self.monitor_traffic()
             flood_list = []
@@ -66,7 +66,7 @@ class AttackDetector:
                 if self.check_flooding(ip):
                     self.blocker.block(ip)
                     self.state.markAttack(ip)
-                    self.storage.log({"ip":ip,"count":self.packet_count[ip],"time":time.time()})
+                    self.storage.insert_event("DETECT", f"ip={ip}, count={self.packet_count[ip]}")
                     flood_list.append(ip)
             for ip in flood_list:
                 self.packet_count.pop(ip)

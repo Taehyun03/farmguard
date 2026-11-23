@@ -20,3 +20,45 @@ SensorCollector는 오직 GatewayState, Storage하고만 대화한다.
 - read_sensor() : 아두이노로부터 한 번 값을 읽어와 dict로 반환
 - run()         : 별도 스레드에서 1초 주기로 read_sensor() 반복 호출하는 루프
 """
+import time
+
+
+class SensorCollector:
+    def __init__(self, state, storage, port="/dev/ttyUSB0", baudrate=9600, overload_timeout=5, test_mode=True):
+        self.state = state
+        self.storage = storage
+        self.overload_timeout = overload_timeout
+        self.test_mode = test_mode
+        self.last_success = time.time()
+        if not test_mode:
+            import serial
+            self.ser = serial.Serial(port, baudrate, timeout=1)
+
+    def read_sensor(self):
+        if self.test_mode:
+            return {"temperature": 24.5, "humidity": 55.0, "soil_moisture": 400, "light": 700}
+        try:
+            line = self.ser.readline().decode().strip()
+            if not line:
+                return None
+            temp, humidity, soil, light = line.split(",")
+            return {
+                "temperature": float(temp),
+                "humidity": float(humidity),
+                "soil_moisture": float(soil),
+                "light": float(light),
+            }
+        except Exception:
+            return None
+
+    def run(self):
+        while True:
+            sample = self.read_sensor()
+            if sample is not None:
+                self.state.setLatest(sample)
+                self.storage.insert_sensor(sample)
+                self.last_success = time.time()
+            else:
+                if time.time() - self.last_success >= self.overload_timeout:
+                    self.state.setOverloaded(True)
+            time.sleep(1)
