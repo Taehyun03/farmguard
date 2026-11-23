@@ -13,6 +13,7 @@ GatewayState — 시스템 전체가 공유하는 "상태 칠판"
 
 import threading
 import time
+from datetime import datetime
 
 class GatewayState:
     def __init__(self):

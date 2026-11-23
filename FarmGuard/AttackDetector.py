@@ -58,15 +58,16 @@ class AttackDetector:
                 break
         s.close()
         
-    def run(self):  # 무한 관찰, 판단, 차단까지 하는 메서드
+    def run(self):
         while True:
-            self.monitor_traffic()
+            self.monitor_traffic()           # 보호 여부와 상관없이 항상 패킷을 받음 (CPU 소모 발생)
             flood_list = []
             for ip in self.packet_count:
                 if self.check_flooding(ip):
-                    self.blocker.block(ip)
                     self.state.markAttack(ip)
                     self.storage.insert_event("DETECT", f"ip={ip}, count={self.packet_count[ip]}")
+                    if self.state.is_protected():
+                        self.blocker.block(ip)   # 보호 켜져있을 때만 실제로 차단
                     flood_list.append(ip)
             for ip in flood_list:
                 self.packet_count.pop(ip)
