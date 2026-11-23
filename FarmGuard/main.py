@@ -13,7 +13,7 @@ def main():
     storage = Storage()
     blocker = Blocker(state, storage)
     detector = AttackDetector(state, blocker, storage)
-    collector = SensorCollector(state, storage)
+    collector = SensorCollector(state, storage, test_mode=False)
     webserver = WebServer(state, storage)
 
     threading.Thread(target=collector.run, daemon=True).start()

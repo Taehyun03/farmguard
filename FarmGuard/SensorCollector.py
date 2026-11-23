@@ -36,17 +36,18 @@ class SensorCollector:
 
     def read_sensor(self):
         if self.test_mode:
-            return None  # 아두이노 연결 안 된 상황을 그대로 흉내 냄
+            return None
         try:
-            line = self.ser.readline().decode().strip()
-            if not line:
+            line = self.ser.readline().decode(errors="replace").strip()
+            if not line.startswith("SENSORS:"):
                 return None
-            temp, humidity, soil, light = line.split(",")
+            parts = line[len("SENSORS:"):].split(",")
+            # parts[0] = 시간(HH:MM), parts[1]=온도, parts[2]=습도, parts[3]=토양수분, parts[4]=조도
             return {
-                "temperature": float(temp),
-                "humidity": float(humidity),
-                "soil_moisture": float(soil),
-                "light": float(light),
+                "temperature": float(parts[1]),
+                "humidity": float(parts[2]),
+                "soil_moisture": float(parts[3]),
+                "light": float(parts[4]),
             }
         except Exception:
             return None
